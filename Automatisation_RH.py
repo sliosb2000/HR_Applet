@@ -46,6 +46,37 @@ def replace_placeholders(doc, mapping):
                         # run.font.size = 12
 
 
+# Define a styling function: highlights Key & Description red if Value is blank or equals Description
+def highlight_keys_desc(row):
+    v = str(row["Value"])
+    desc = str(row["Description"])
+    # Condition: empty/whitespace OR identical to Description
+    cond = (v.strip() == "") or (v == " ") or (v == desc)
+    # Apply red background to Key & Description, else no style
+    return ["background-color: #E57373" if col in ["Key", "Description"] and cond else "" for col in row.index]
+
+def highlight_placeholders_background(doc, fill_color="FF0000"):
+    """
+    For every run whose text matches {{...}}, add a w:shd element
+    to its rPr, giving it a background of `fill_color` (hex, no #).
+    """
+    pattern = re.compile(r"\{\{.*?\}\}")
+
+    def shade_run(run):
+        rPr = run._element.get_or_add_rPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), fill_color)
+        rPr.append(shd)
+
+    for para in doc.paragraphs:
+        if pattern.search(para.text):
+            for run in para.runs:
+                shade_run(run)
+
+
+
 # --- Page Config ---
 st.set_page_config(page_title="HR Automation Tool", layout="wide")
 
@@ -102,22 +133,23 @@ df_information = [
 ]
 
 # Build the DataFrame
-df = pd.DataFrame(df_information)
-df.index = df.Key
+if "df" not in st.session_state:
+    st.session_state.df = pd.DataFrame(df_information)
+st.session_state.df.index = st.session_state.df.Key
 
 
 if data_file is not None:
     fname = data_file.name.lower()
     if fname.endswith(".xlsx"):
-        df = pd.read_excel(data_file)
+        st.session_state.df = pd.read_excel(data_file)
     elif fname.endswith(".csv"):
         # Try comma then semicolon separators
         try:
-            df = pd.read_csv(data_file, sep=",")
-            if df.shape[1] < 2:
+            st.session_state.df = pd.read_csv(data_file, sep=",")
+            if st.session_state.df.shape[1] < 2:
                 raise ValueError("Only one column detected, retrying with semicolon separator.")
         except Exception:
-            df = pd.read_csv(data_file, sep=";")
+            st.session_state.df = pd.read_csv(data_file, sep=";")
     else:
         # Parse Word table
         doc = Document(data_file)
@@ -141,59 +173,48 @@ if data_file is not None:
         # Filter df_raw using cells_of_interest dictionary
         # Create a new dataframe with only the rows specified in cells_of_interest
         filtered_rows = []
-        for key, row_index in cells_of_interest.items():
-            if row_index < len(df_raw):
-                row_data = df_raw.iloc[row_index].copy()
-                row_data.name = key  # Name the row with the dictionary key
-                filtered_rows.append(row_data)
+        if len(df_raw) < max(cells_of_interest.values()):
+            st.error("Wrong Word template used. Please use the correct template or fill out table manually.")  
+            filtered_rows = df_information
+            st.session_state.df = pd.DataFrame(filtered_rows)
+        else:
+            for key, row_index in cells_of_interest.items():
+                if row_index < len(df_raw):
+                    row_data = df_raw.iloc[row_index].copy()
+                    row_data.name = key  # Name the row with the dictionary key
+                    filtered_rows.append(row_data)
         
-        # Create the filtered dataframe
-        df_filtered = pd.DataFrame(filtered_rows)
-        
-        # Use the filtered dataframe for editing
-        df = df_filtered
-        df["Key"] = df.index
-        df = df[["Key","Description","Value"]] #reorder columns
-        df = df.astype({'Key': 'string', 'Value': 'string', 'Description': 'string'})
-        
-
-# Define a styling function: highlights Key & Description red if Value is blank or equals Description
-def highlight_keys_desc(row):
-    v = str(row["Value"])
-    desc = str(row["Description"])
-    # Condition: empty/whitespace OR identical to Description
-    cond = (v.strip() == "") or (v == " ") or (v == desc)
-    # Apply red background to Key & Description, else no style
-    return ["background-color: #E57373" if col in ["Key", "Description"] and cond else "" for col in row.index]
-
-def highlight_placeholders_background(doc, fill_color="FF0000"):
-    """
-    For every run whose text matches {{...}}, add a w:shd element
-    to its rPr, giving it a background of `fill_color` (hex, no #).
-    """
-    pattern = re.compile(r"\{\{.*?\}\}")
-
-    def shade_run(run):
-        rPr = run._element.get_or_add_rPr()
-        shd = OxmlElement('w:shd')
-        shd.set(qn('w:val'), 'clear')
-        shd.set(qn('w:color'), 'auto')
-        shd.set(qn('w:fill'), fill_color)
-        rPr.append(shd)
-
-    for para in doc.paragraphs:
-        if pattern.search(para.text):
-            for run in para.runs:
-                shade_run(run)
+            # Create the filtered dataframe
+            df_filtered = pd.DataFrame(filtered_rows)
+            
+            # Use the filtered dataframe for editing
+            st.session_state.df = df_filtered
+            df_filtered["Key"] = df_filtered.index
+            st.session_state.df = df_filtered[["Key","Description","Value"]] #reorder columns
+        st.session_state.df = st.session_state.df.astype({'Key': 'string', 'Value': 'string', 'Description': 'string'})
+        st.session_state.df.index = st.session_state.df.Key
 
 
 
 # --- 2. Editable table for user corrections ---
-if not df.empty:
+if not st.session_state.df.empty:
     st.subheader("Review & Edit Data")
+    st.button("refresh table",icon="🔄")
 
-    df["Value"]["first_name"] = df["Value"]["first_name"] if df["Value"]["first_name"] not in [""," ","  "] else df["Value"]["full_name"].split(" ")[0]
-    df["Value"]["last_name"] = df["Value"]["last_name"] if df["Value"]["last_name"] not in [""," ","  "] else df["Value"]["full_name"].split(" ")[-1]
+    df = st.session_state.df
+
+    df.loc["first_name", "Value"] = (
+        df.loc["first_name", "Value"].strip()
+        if df.loc["first_name", "Value"].strip() != ""
+        else df.loc["full_name", "Value"].split(" ")[0]
+    )
+
+    df.loc["last_name", "Value"] = (
+        df.loc["last_name", "Value"].strip()
+        if df.loc["last_name", "Value"].strip() != ""
+        else df.loc["full_name", "Value"].split(" ")[-1]
+    )
+    
     styled_df = df.style.apply(highlight_keys_desc, axis=1)
     edited_df = st.data_editor(styled_df, 
                                use_container_width=True,
@@ -213,6 +234,9 @@ if not df.empty:
                                },
                                disabled=["Key","Description"],
                                hide_index=True)
+    
+    st.session_state.df = edited_df
+
 else:
     st.info("Upload a CSV, XLSX, or DOCX file to begin.")
     st.stop()
@@ -232,7 +256,6 @@ elif type_document == "Custom Input Document":
     template_doc = st.file_uploader(
         label="Upload Word template (.docx)", 
         type=["docx"],
-        # help="If omitted, a basic built-in template will be used.",
         key="template_upload"
     )
 
