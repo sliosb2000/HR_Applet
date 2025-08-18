@@ -87,7 +87,7 @@ with open("data/Offer_letter_EFOR.docx", "rb") as file:
     st.download_button(
                 label="Download Empty Offer Letter to Fill",
                 data=file,
-                file_name="Offer_letter.docx",
+                file_name="Offer_letter_empty.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
 
