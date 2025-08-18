@@ -83,7 +83,7 @@ st.set_page_config(page_title="HR Automation Tool", layout="wide")
 # st.markdown("HR Automation Tool")
 st.sidebar.markdown("Page 1: Data Input & Editing")
 
-with open("data/Offer_letter.docx", "rb") as file:
+with open("data/Offer_letter_EFOR.docx", "rb") as file:
     st.download_button(
                 label="Download Empty Offer Letter to Fill",
                 data=file,
