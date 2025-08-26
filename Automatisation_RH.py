@@ -81,8 +81,8 @@ def highlight_placeholders_background(doc, fill_color="FF0000"):
 st.set_page_config(page_title="HR Automation Tool", layout="wide")
 
 # st.markdown("HR Automation Tool")
-st.sidebar.markdown("Page 1: Data Input & Editing")
 
+# st.markdown("Step #0 Download And Fill Offer Letter")
 with open("data/Offer_letter_EFOR.docx", "rb") as file:
     st.download_button(
                 label="Download Empty Offer Letter to Fill",
@@ -91,6 +91,7 @@ with open("data/Offer_letter_EFOR.docx", "rb") as file:
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
 
+# st.markdown("Step #1 Upload Filled Offer Letter")
 # --- 1. File upload: Source data : HR filled Offer letter (CSV, XLSX, or Word table) ---
 data_file = st.file_uploader(
     label="Upload source data : HR filled Offer letter (Word .docx). ⬆️ You can download an empty Offer letter to fill ",
