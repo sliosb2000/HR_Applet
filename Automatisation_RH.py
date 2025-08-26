@@ -47,13 +47,11 @@ def replace_placeholders(doc, mapping):
 
 
 # Define a styling function: highlights Key & Description red if Value is blank or equals Description
-def highlight_keys_desc(row):
-    v = str(row["Value"])
-    desc = str(row["Description"])
-    # Condition: empty/whitespace OR identical to Description
-    cond = (v.strip() == "") or (v == " ") or (v == desc)
-    # Apply red background to Key & Description, else no style
-    return ["background-color: #E57373" if col in ["Key", "Description"] and cond else "" for col in row.index]
+def highlight_keys_desc(row, color="#C62828"):  # deep red text
+    v, desc = str(row["Value"]), str(row["Description"])
+    cond = (v.strip() == "") or (v == desc)
+    return [f"color: {color}" if col in ("Key","Description") and cond else "" 
+            for col in row.index]
 
 def highlight_placeholders_background(doc, fill_color="FF0000"):
     """
@@ -85,7 +83,7 @@ st.set_page_config(page_title="HR Automation Tool", layout="wide")
 # st.markdown("Step #0 Download And Fill Offer Letter")
 with open("data/Offer_letter_EFOR.docx", "rb") as file:
     st.download_button(
-                label="Download Empty Offer Letter to Fill",
+                label="0: Download Empty Offer Letter to Fill",
                 data=file,
                 file_name="Offer_letter_empty.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -94,7 +92,7 @@ with open("data/Offer_letter_EFOR.docx", "rb") as file:
 # st.markdown("Step #1 Upload Filled Offer Letter")
 # --- 1. File upload: Source data : HR filled Offer letter (CSV, XLSX, or Word table) ---
 data_file = st.file_uploader(
-    label="Upload source data : HR filled Offer letter (Word .docx). ⬆️ You can download an empty Offer letter to fill ",
+    label="1: Upload source data : HR filled Offer letter (Word .docx). ⬆️ You can download an empty Offer letter to fill ",
     type=["docx"],
     help="CSV/XLSX should have columns [Key, Value]. Word should contain a single 2-col table with labels in col1 and blanks in col2.",
     key="data_upload"
@@ -207,7 +205,7 @@ if data_file is not None:
 
 # --- 2. Editable table for user corrections ---
 if not st.session_state.df.empty:
-    st.subheader("Review & Edit Data")
+    st.markdown("#### 2: Review & Edit Data")
     st.button("refresh table",icon="🔄")
 
     df = st.session_state.df
@@ -250,7 +248,7 @@ else:
     st.info("Upload a CSV, XLSX, or DOCX file to begin.")
     st.stop()
 
-type_document = st.selectbox("Type de document",["Employment Contract","Contingent Offer","Custom Input Document"])
+type_document = st.selectbox("3: Select Type of Contract",["Employment Contract","Contingent Offer","Custom Input Document"])
 
 if type_document == "Employment Contract":
     # st.write("Employment Contract")
@@ -272,7 +270,7 @@ elif type_document == "Custom Input Document":
 
 
 # --- 4. Generate filled document ---
-if st.button("Generate & Download Word Document"):
+if st.button("4: Generate & Download Word Document"):
     if template_doc is None:
         st.error("Please upload a template document.")
         st.stop()
@@ -298,7 +296,7 @@ if st.button("Generate & Download Word Document"):
         template_doc.save(buffer)
         buffer.seek(0)
         st.download_button(
-            label="Download Filled Document",
+            label="5: Download Filled Document",
             data=buffer,
             file_name=f"{"_".join(type_document.split(" "))}_{"_".join(edited_df["Value"]["full_name"].split(" "))}_{"_".join(edited_df["Value"]["job_title"].split(" "))}.docx",
 
