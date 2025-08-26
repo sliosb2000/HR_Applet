@@ -1,0 +1,16 @@
+
+[2025-08-25T22:52:00] 0
+Traceback (most recent call last):
+  File "click\core.py", line 1373, in main
+  File "click\core.py", line 718, in exit
+click.exceptions.Exit: 0
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "launch_app.py", line 61, in <module>
+  File "launch_app.py", line 57, in main
+  File "click\core.py", line 1442, in __call__
+  File "click\core.py", line 1391, in main
+SystemExit: 0
+
