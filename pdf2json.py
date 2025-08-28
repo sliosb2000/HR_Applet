@@ -22,7 +22,7 @@ SCHEMA_SHAPE = {
     "certifications": [{"name": ""}]
 }
 
-SYSTEM_PROMPT = """You are an expert résumé extractor.
+SYSTEM_PROMPT = """You are an expert resume extractor.
 Return ONLY one valid JSON object that matches the provided schema.
 Unknown fields => "" (strings) or [] (lists). Do not invent facts.
 Months must be '01'..'12' or "".
